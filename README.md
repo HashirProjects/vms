@@ -102,3 +102,19 @@ sudo systemctl restart k3s
 - verify everything is up, on vm1:
 
 sudo kubectl get nodes
+
+- scp the manifest.yaml to vm1
+
+- apply it:
+
+sudo kubectl apply -f flask-deployment.yaml
+
+- check if pods are running:
+
+sudo kubectl get pods -o wide
+
+- get port its running on:
+
+sudo kubectl get svc flask
+
+- test by accessing 192.168.100.10/<PORT>
