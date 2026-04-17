@@ -40,10 +40,65 @@ newgrp docker
 
 docker run hello-world
 
-- scp app and dockerfile to a directory in vm 4
+- scp app and dockerfile to a directory in vm4
 
-- docker build and docker run:
+- docker build and docker run in vm4:
 
 docker build -t flask . && docker run -p 5000:5000 flask
 
+- create registry:
 
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+
+- since this is http, we need to edit /etc/docker/daemon.json:
+
+sudo -i
+cat > /etc/docker/daemon.json << EOF
+{
+  "insecure-registries": ["192.168.100.13:5000"]
+}
+EOF
+systemctl restart docker
+
+- if that works, push it to the registry:
+
+docker build -t 192.168.100.13:5000/flask:latest .
+docker push 192.168.100.13:5000/flask:latest
+
+- on vm1 (control plane):
+
+curl -sfL https://get.k3s.io | sh -
+
+- get the token for the worker nodes:
+
+sudo cat /var/lib/rancher/k3s/server/node-token
+
+- on vm2 and vm3 (workers), replacing the token, node_name and IP:
+
+curl -sfL https://get.k3s.io | K3S_URL=https://192.168.100.10:6443 K3S_TOKEN=<TOKEN_HERE> K3S_NODE_NAME=vm2 sh -
+
+- tell k3s about the insecure registry, on vm2, and vm3:
+
+sudo mkdir -p /etc/rancher/k3s
+sudo tee /etc/rancher/k3s/registries.yaml <<EOF
+mirrors:
+  "192.168.100.13:5000":
+    endpoint:
+      - "http://192.168.100.13:5000"
+EOF
+sudo systemctl restart k3s-agent
+
+- and on vm1:
+
+sudo mkdir -p /etc/rancher/k3s
+sudo tee /etc/rancher/k3s/registries.yaml <<EOF
+mirrors:
+  "192.168.100.13:5000":
+    endpoint:
+      - "http://192.168.100.13:5000"
+EOF
+sudo systemctl restart k3s
+
+- verify everything is up, on vm1:
+
+sudo kubectl get nodes
