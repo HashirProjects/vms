@@ -107,7 +107,7 @@ sudo kubectl get nodes
 
 - apply it:
 
-sudo kubectl apply -f flask-deployment.yaml
+sudo kubectl apply -f manifest.yaml
 
 - check if pods are running:
 
